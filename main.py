@@ -62,5 +62,4 @@ async def on_message(message):
 
 
 bot.add_cog(Moderation())
-
-client.run("Your Token Here") # Your Bot's Token
+bot.run("Your Token Here") # Your Bot's Token
