@@ -1,3 +1,6 @@
+#WOOF WARSHIP DISCORDS BOT
+
+#imports
 import discord
 import random
 import time
@@ -6,32 +9,56 @@ import re, string
 from discord.ext import commands
 from pretty_help import PrettyHelp
 
-
+#moderation category
 class Moderation(commands.Cog, description="Commands for Moderation. Prefix = $"):
+
+    #server name check
+    @commands.command(name='snc', help="Tells the name of the server/guild")
+    async def snc(self, ctx):
+        server_name = ctx.message.guild.name
+        await ctx.channel.send(f"You Are In {server_name}")
+
+    #kick command
     @commands.has_permissions(kick_members=True)
     @commands.command(name='kick', help='Kicks a user from this server')
     async def kick(self, ctx, user: discord.Member, *, reason="No reason provided"):
-        kick = discord.Embed(title=f":guide_dog: Kicked {user.name}!", description=f"Reason: {reason}\nBy: {ctx.author.mention}")
-        kickdm = discord.Embed(title=f"You Were Kicked From ACuteWoof's Community! :door:", description=f"Reason: {reason}\nBy: {ctx.author.mention}")
+        server_name = ctx.message.guild.name
+        kickmsg = discord.Embed(title=f"**:guide_dog: Kicked {user.name}!**", description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**").set_image(url="https://i.pinimg.com/originals/c0/f1/f8/c0f1f8bfb261a92525cb81501fe82903.gif")
+        kickdm = discord.Embed(title=f"You Were Kicked From {server_name}! :door:", description=f"Reason: {reason}\nBy: {ctx.author.mention}").set_image(url="https://emoji.gg/assets/emoji/7886_jimmy.png")
 
         await ctx.message.delete()
-        await ctx.channel.send(embed=kick)
+        await ctx.channel.send(embed=kickmsg)
         await user.send(embed=kickdm)
         await user.kick(reason=reason)
 
 
+    #ban command
+    @commands.has_permissions(ban_members=True)
+    @commands.command(name='ban', help='Bans a user from this server')
+    async def ban(self, ctx, user: discord.Member, *, reason="No reason provided"):
+        server_name = ctx.message.guild.name
+        banmsg = discord.Embed(title=f"**:guide_dog: Banned {user.name}!**", description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**").set_image(url="https://media.tenor.com/images/76f50d3ec6888dd3552db1d074435022/tenor.gif")
+        bandm = discord.Embed(title=f"You Were Banned From {server_name}!", description=f"Reason: {reason}\nBy: {ctx.author.mention}").set_image(url="https://emoji.gg/assets/emoji/7886_jimmy.png")
+
+        await ctx.message.delete()
+        await ctx.channel.send(embed=banmsg)
+        await user.send(embed=bandm)
+        await user.ban(reason=reason)
+
+    #clear command
     @commands.has_permissions(administrator=True)
     @commands.command(name='clear', help='Clears a set of messages')
     async def clear(self, ctx, amount = 1):
         await ctx.channel.purge(limit=amount)
-        embed_msg = discord.Embed(title=f":guide_dog: Cleared {amount} Messages!")
+        embed_msg = discord.Embed(title=f":guide_dog: Cleared {amount} Messages!").set_image(url="https://media1.tenor.com/images/db3f81f2fe5f1513dae0027453064c2c/tenor.gif?itemid=17051644")
 
         await ctx.channel.send(embed=embed_msg)
 
-        time.sleep(2)
+        time.sleep(5)
         await ctx.channel.purge(limit=1)
 
-bot = commands.Bot(command_prefix=commands.when_mentioned_or('$'), help_command=PrettyHelp())
+
+bot = commands.Bot(command_prefix=commands.when_mentioned_or('$'), help_command=PrettyHelp(color=discord.Color.green()))
 
 def isolate(s):
     l = re.findall(r"[\w']+", s)
@@ -53,10 +80,13 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    hello_phrases = ['hello', 'hi', 'Hi', 'Hey', 'hey', 'Hello']
+    hello_phrases = ['hello', 'hi', 'Hi', 'Hey', 'hey', 'Hello', 'Konichiwa']
 
     if any(word in hello_phrases for word in isolate(message.content)):
         await message.channel.send('Hello! :wave:')
+
+    if message.content == "ping" or message.content == "ping":
+        await message.channel.send("Pong :ping_pong:")
 
     await bot.process_commands(message)
 
