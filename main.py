@@ -11,12 +11,41 @@ from pretty_help import PrettyHelp
 
 #moderation category
 class Moderation(commands.Cog, description="Commands for Moderation. Prefix = $"):
+    #mute command
+    @commands.has_permissions(kick_members=True)
+    @commands.command(name='mute', help="Disables the access of a user to send messages")
+    async def mute(self, ctx, member: discord.Member, *, reason="No reason provided", timein = 30000):
+        role_muted = discord.utils.get(ctx.guild.roles, name='Muted')
+        await member.add_roles(role_muted)
+
+        muted_msg = discord.Embed(title=f"**:guide_dog: Muted {member}!**", description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**\n**Time In Seconds: {timein}**")
+        await ctx.channel.send(embed=muted_msg)
+
+        timein = int(time)
+        time.sleep(timein)
+        await member.remove_roles(role_muted)
+
+        unmuted_msg = discord.Embed(title=f"**:guide_dog: unmted {member}!**")
+        await ctx.channel.send(embed=unmuted_msg)
+
+
+    #unmute command
+    @commands.has_permissions(kick_members=True)
+    @commands.command(name='unmute', help="Enables the access of a user to send messages")
+    async def unmute(self, ctx, member: discord.Member):
+        role_muted = discord.utils.get(ctx.guild.roles, name='Muted')
+        await member.remove_roles(role_muted)
+
+        unmuted_msg = discord.Embed(title=f"**:guide_dog: Unmted {member}!**", description=f"**By: {ctx.author.mention}**")
+        await ctx.channel.send(embed=unmuted_msg)
+
 
     #server name check
     @commands.command(name='snc', help="Tells the name of the server/guild")
     async def snc(self, ctx):
         server_name = ctx.message.guild.name
-        await ctx.channel.send(f"You Are In {server_name}")
+        await ctx.channel.send(discord.Embed(title=f"You Are In {server_name}"))
+
 
     #kick command
     @commands.has_permissions(kick_members=True)
