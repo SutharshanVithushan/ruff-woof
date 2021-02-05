@@ -1,4 +1,4 @@
-# WOOF WARSHIP DISCORDS BOT
+# RUFF WOOF DISCORD BOT
 
 # imports
 # standard library imports
@@ -21,15 +21,22 @@ intents.typing = False # to disable typing
 intents.presences = False #to disable presences
 
 
-#Moderation category
-class Moderation(commands.Cog, description="Commands for Moderation. Prefix = $"):
+# Moderation category
+class Moderation(commands.Cog, description="Commands for Moderation. Uses '$' as prefix."):
 
     #silence channel
     @commands.has_permissions(administrator=True) # see if command author has admin perms
     @commands.command(name='hush', help='Silence a text channel')
-    async def hush(self, ctx):
-        role_members = discord.utils.get(ctx.guild.roles, name='Not A Woof (Yet)')
+    async def hush(self, ctx, role_name='Members'):
+        role_members = discord.utils.get(ctx.guild.roles, name=role_name)
         await ctx.channel.set_permissions(role_members, send_messages=False)
+        
+        embed_msg = discord.Embed(
+        title='Silenced Channel!',
+        description=f'By: {ctx.author.mention}'
+        )
+
+        await ctx.channel.send(embed=embed_msg)
 
 
     #mute command
@@ -100,12 +107,25 @@ class Moderation(commands.Cog, description="Commands for Moderation. Prefix = $"
     @commands.command(name='clear', help='Clears a set of messages')
     async def clear(self, ctx, amount = 1):
         await ctx.channel.purge(limit=amount+1)
-        embed_msg = discord.Embed(title=f":guide_dog: Cleared {amount} Messages!").set_image(url="https://tenor.com/view/shibe-snow-shibe-shaking-shiba-inu-shiba-inu-cute-shiba-gif-19856803")
+        clear_msg = discord.Embed(title=f":guide_dog: Cleared {amount} Messages!").set_image(url="https://tenor.com/view/shibe-snow-shibe-shaking-shiba-inu-shiba-inu-cute-shiba-gif-19856803")
 
-        await ctx.channel.send(embed=embed_msg)
+        await ctx.channel.send(embed=clear_msg)
 
         time.sleep(5)
         await ctx.channel.purge(limit=1)
+
+# Utility Class
+class Utility(commands.Cog, description="Utilities like embeds and other stuff. Uses '$' as prefix."):
+    
+    #Create embed command
+    @commands.command(name='embed', help='Creates an embed with a given title and description.')
+    async def embed(self, ctx, title, description):
+        embed_msg = discord.Embed(
+        title=title,
+        description=description
+        )
+
+        await ctx.channel.send(embed=embed_msg)
 
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('$'),intents=intents ,help_command=PrettyHelp(color=discord.Color.green()))
@@ -153,4 +173,5 @@ async def on_message(message):
 
 
 bot.add_cog(Moderation())
+bot.add_cog(Utility())
 bot.run("Your Token Here") # Your Bot's Token
