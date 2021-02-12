@@ -192,6 +192,13 @@ class Utility(commands.Cog, description="Utilities like embeds and other stuff. 
         await ctx.channel.send(embed=embed)
     
 
+    #avatar
+    @commands.command(name='mypfp', help='Displays your pfp')
+    async def pfp(self, ctx):
+        embed = discord.Embed(title=f'Avatar of {ctx.author.display_name}', color = discord.Color.teal()).set_image(url=ctx.author.avatar_url)
+        await ctx.channel.send(embed=embed)
+
+
     #Create simple embed command
     @commands.command(name='embed', help='Creates an embed with a given title, description, thumbnail, and fields')
     async def embed(self, ctx, given_id=0, title="", description="", thumbnail="", field_name="", field_value="", image=""):
