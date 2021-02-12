@@ -103,7 +103,7 @@ class Moderation(commands.Cog, description="Commands for Moderation. Uses '$' as
         server_name = ctx.message.guild.name
         kickmsg = discord.Embed(title=f"**:guide_dog: Kicked {user.name}!**", description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**").set_image(url="https://i.pinimg.com/originals/c0/f1/f8/c0f1f8bfb261a92525cb81501fe82903.gif", color=discord.Color.teal())
         kickdm = discord.Embed(title=f"You Were KICKED From {server_name}! :door:").set_thumbnail(url="https://img.icons8.com/ios/452/door-opened.png", color=discord.Color.orange())
-        kickdm.add_field(name=' ', value='\u200b', inline=False)
+        kickdm.add_field(name=' ', value='\u200b', inline=False)
         kickdm.add_field(name='Reason', value=reason, inline=True)
         kickdm.set_footer(text='Please refrain from this kind of behaviour in the future.')
 
@@ -157,14 +157,15 @@ class Moderation(commands.Cog, description="Commands for Moderation. Uses '$' as
     @commands.has_permissions(manage_messages=True) # see if command author has admin perms
     @commands.command(name='clear', help='Clears a set of messages')
     async def clear(self, ctx, amount = 1):
-        await ctx.channel.purge(limit=amount+1)
-        clear_msg = discord.Embed(title=f":guide_dog: Cleared {amount} Messages!").set_image(url="https://tenor.com/view/shibe-snow-shibe-shaking-shiba-inu-shiba-inu-cute-shiba-gif-19856803", color=discord.Color.teal())
+        await ctx.channel.purge(limit=amount)
+        clear_msg = discord.Embed(title=f":guide_dog: Cleared {amount} Messages!", color=discord.Color.teal()).set_image(url="https://tenor.com/view/shibe-snow-shibe-shaking-shiba-inu-shiba-inu-cute-shiba-gif-19856803")
 
         await ctx.channel.send(embed=clear_msg)
-
-        time.sleep(5)
-        await ctx.channel.purge(limit=1)
-
+        channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
+        channel_id = channel.id
+        channel = bot.get_channel(channel_id)
+        await ctx.message.delete()
+        await channel.send(embed=clear_msg)
 
 # Utility Class
 class Utility(commands.Cog, description="Utilities like embeds and other stuff. Uses '$' as prefix."):
@@ -186,12 +187,8 @@ class Utility(commands.Cog, description="Utilities like embeds and other stuff. 
         for i in range(len(infos)):
             embed.add_field(name=info_title[i], value=infos[i])
             i += 1
-        try:
-            embed.set_thumbnail(url=ctx.guild.icon)
-        except:
-            pass
-        
-        print(ctx.guild.icon_url)
+
+        embed.set_thumbnail(url=ctx.guild.icon_url)
         await ctx.channel.send(embed=embed)
     
 
