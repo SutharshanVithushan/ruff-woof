@@ -485,7 +485,6 @@ async def on_message(message):
 
     for item in info_raw:
         for info_tuple in item:
-            print(type(info_tuple))
             info.append(info_tuple)
 
     if not message.author.id in info:
