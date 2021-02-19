@@ -95,11 +95,7 @@ def get_all(server_id):
     command = f"SELECT * FROM list WHERE server_id = {server_id}"
     cursor.execute(command)
     info = cursor.fetchall()
-    infos = []
-    for item in infos:
-        for i in item:
-            infos.append(i)
-    return infos
+    return info
 
 
 # get all info no server_id
@@ -339,10 +335,6 @@ class Utility(commands.Cog, description="Utilities like embeds and other stuff. 
     # Display level and Xp of a user in a server
     @commands.command(name="lvl", help="Display your level and xp")
     async def lvl(self, ctx):
-        server_lvl = get_all(ctx.guild.id)
-        if not ctx.message.author.id in server_lvl:
-            return
-
         xp = get_xp_info(ctx.guild.id, ctx.author.id)
         lvl = get_lvl_info(ctx.guild.id, ctx.author.id)
         embed = discord.Embed(
@@ -485,6 +477,7 @@ async def on_message(message):
 
     for item in info_raw:
         for info_tuple in item:
+            print(type(info_tuple))
             info.append(info_tuple)
 
     if not message.author.id in info:
