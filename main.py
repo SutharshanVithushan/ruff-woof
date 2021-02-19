@@ -8,6 +8,7 @@ import random
 import re
 import string
 import time
+import sqlite3
 
 # third-part imports
 import discord
@@ -15,17 +16,66 @@ import nacl
 from discord.ext import commands
 from pretty_help import PrettyHelp
 
+
+conn = sqlite3.connect("database.db")
+cursor = conn.cursor()
+
+
+# add user
+def add_user(server_id, user_id, xp, level):
+    command = f"INSERT INTO list VALUES ('{server_id}','{user_id}','{xp}','{level}')"
+    cursor.execute(command)
+    conn.commit()
+
+
+# set xp for a user
+def set_xp(server_id, user_id, xp):
+    command = "SELECT * FROM list"
+    cursor.execute(command)
+
+    command = f"UPDATE list SET xp = {xp} WHERE user_id = {user_id} AND server_id = {server_id}"
+    cursor.execute(command)
+    conn.commit()
+    print(f"XP set to {user_id} in {server_id} to {xp}")
+
+
+# set level for user
+def set_lvl(server_id, user_id, lvl):
+    command = "SELECT * FROM list"
+    cursor.execute(command)
+
+    command = f"UPDATE list SET lvl = {lvl} WHERE user_id = {user_id} AND server_id = {server_id}"
+    cursor.execute(command)
+    conn.commit()
+    print(f"Level set to {user_id} in {server_id} to {lvl}")
+
+
+# get info about levels and xp for a user
+def get_xp_info(server_id, user_id):
+    command = f"SELECT * FROM list WHERE user_id = {user_id} AND server_id = {server_id}"
+    cursor.execute(command)
+    infos = cursor.fetchall()
+    infos = f"xp: {infos[2]} | lvl: {infos[3]}"
+    print(infos)
+    return infos
+
+
+# get all info
+def get_all():
+    command = f"SELECT * FROM list"
+    cursor.execute(command)
+    infos = cursor.fetchall()
+    return infos
+
+
 # Moderation category
-
-
 class Moderation(
     commands.Cog, description="Commands for Moderation. Uses '$' as prefix."
 ):
 
     # silence channel
-    @commands.has_permissions(
-        administrator=True
-    )  # see if command author has admin perms
+    # see if command author has admin perms
+    @commands.has_permissions(administrator=True)
     @commands.command(name="hush", help="Silence a text channel")
     async def hush(self, ctx, role_name="Members"):
         role_members = discord.utils.get(ctx.guild.roles, name=role_name)
@@ -43,9 +93,8 @@ class Moderation(
         await channel.send(embed=embed_msg)
 
     # unsilence channel
-    @commands.has_permissions(
-        administrator=True
-    )  # see if command author has admin perms
+    # see if command author has admin perms
+    @commands.has_permissions(administrator=True)
     @commands.command(name="unhush", help="Unsilence a text channel")
     async def hush(self, ctx, role_name="Members"):
         role_members = discord.utils.get(ctx.guild.roles, name=role_name)
@@ -56,6 +105,7 @@ class Moderation(
             description=f"By: {ctx.author.mention}",
             color=discord.Color.blue(),
         )
+
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
@@ -65,12 +115,8 @@ class Moderation(
     # mute command
     # see if command author has kick perms
     @commands.has_permissions(kick_members=True)
-    @commands.command(
-        name="mute", help="Disables the access of a user to send messages"
-    )
-    async def mute(
-        self, ctx, member: discord.Member, *, reason="No reason provided", timein=30000
-    ):
+    @commands.command(name="mute", help="Disables the access of a user to send messages")
+    async def mute(self, ctx, member: discord.Member, *, reason="No reason provided", timein=30000):
         role_muted = discord.utils.get(ctx.guild.roles, name="Muted")
         await member.add_roles(role_muted)
 
@@ -79,30 +125,36 @@ class Moderation(
             description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**\n**Time In Seconds: {timein}**",
             color=discord.Color.teal,
         )
+
         await ctx.channel.send(embed=muted_msg)
+
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await channel.send(embed=muted_msg)
 
         timein = int(time)
         time.sleep(timein)
+
         await member.remove_roles(role_muted)
 
         unmuted_msg = discord.Embed(
-            title=f"**:guide_dog: unmted {member}!**", color=discord.Color.teal()
+            title=f"**:guide_dog: unmted {member}!**",
+            color=discord.Color.teal()
         )
+
         await ctx.channel.send(embed=unmuted_msg)
+
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await channel.send(embed=unmuted_msg)
 
     # unmute command
     @commands.has_permissions(manage_roles=True)
-    @commands.command(
-        name="unmute", help="Enables the access of a user to send messages"
-    )
+    @commands.command(name="unmute", help="Enables the access of a user to send messages")
     async def unmute(self, ctx, member: discord.Member):
         role_muted = discord.utils.get(ctx.guild.roles, name="Muted")
         await member.remove_roles(role_muted)
@@ -110,11 +162,13 @@ class Moderation(
         unmuted_msg = discord.Embed(
             title=f"**:guide_dog: Unmted {member}!**",
             description=f"**By: {ctx.author.mention}**",
-            color=discord.Color.teal(),
+            color=discord.Color.teal()
         )
+
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await ctx.channel.send(embed=unmuted_msg)
         await channel.send(embed=unmuted_msg)
 
@@ -124,20 +178,23 @@ class Moderation(
     @commands.command(name="kicks", help="Kicks a user from this server")
     async def kick(self, ctx, user: discord.Member, *, reason="No reason provided"):
         server_name = ctx.message.guild.name
+
         kickmsg = discord.Embed(
             title=f"**:guide_dog: Kicked {user.name}!**",
             description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**",
+            color=discord.Color.teal(),
         ).set_image(
             url="https://i.pinimg.com/originals/c0/f1/f8/c0f1f8bfb261a92525cb81501fe82903.gif",
-            color=discord.Color.teal(),
         )
+
         kickdm = discord.Embed(
-            title=f"You Were KICKED From {server_name}! :door:"
+            title=f"You Were KICKED From {server_name}! :door:",
+            color=discord.Color.green()
         ).set_thumbnail(
             url="https://img.icons8.com/ios/452/door-opened.png",
-            color=discord.Color.orange(),
         )
-        kickdm.add_field(name=" ", value="\u200b", inline=False)
+
+        kickdm.add_field(name="\u200b", value="\u200b", inline=False)
         kickdm.add_field(name="Reason", value=reason, inline=True)
         kickdm.set_footer(
             text="Please refrain from this kind of behaviour in the future."
@@ -146,6 +203,7 @@ class Moderation(
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await channel.send(embed=kickmsg)
         await user.send(embed=kickdm)
         await user.kick(reason=reason)
@@ -159,16 +217,18 @@ class Moderation(
         banmsg = discord.Embed(
             title=f"**:guide_dog: Banned {user.name}!**",
             description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**",
+            color=discord.Color.teal(),
         ).set_image(
             url="https://media.tenor.com/images/76f50d3ec6888dd3552db1d074435022/tenor.gif",
-            color=discord.Color.teal(),
         )
+
         bandm = discord.Embed(
-            title=f"You Were BANNED From {server_name}!"
+            title=f"You Were BANNED From {server_name}!",
+            color=discord.Color.red(),
         ).set_thumbnail(
             url="https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
-            color=discord.Color.red(),
         )
+
         bandm.add_field(name="Reason", value=reason, inline=True)
         bandm.set_footer(
             text="Please refrain from this kind of behaviour in the future."
@@ -177,6 +237,7 @@ class Moderation(
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await ctx.message.delete()
         await channel.send(embed=banmsg)
         await user.send(embed=bandm)
@@ -204,16 +265,17 @@ class Moderation(
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await ctx.message.delete()
         await channel.send(embed=unbanmsg)
 
     # clear command
-    @commands.has_permissions(
-        manage_messages=True
-    )  # see if command author has admin perms
+    # see if command author has admin perms
+    @commands.has_permissions(manage_messages=True)
     @commands.command(name="clear", help="Clears a set of messages")
     async def clear(self, ctx, amount=1):
         await ctx.channel.purge(limit=amount)
+
         clear_msg = discord.Embed(
             title=f":guide_dog: Cleared {amount} Messages!", color=discord.Color.teal()
         ).set_image(
@@ -221,23 +283,20 @@ class Moderation(
         )
 
         await ctx.channel.send(embed=clear_msg)
+
         channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
         channel_id = channel.id
         channel = bot.get_channel(channel_id)
+
         await ctx.message.delete()
         await channel.send(embed=clear_msg)
 
 
 # Utility Class
-class Utility(
-    commands.Cog,
-    description="Utilities like embeds and other stuff. Uses '$' as prefix.",
-):
+class Utility(commands.Cog, description="Utilities like embeds and other stuff. Uses '$' as prefix."):
 
     # Create simple react command
-    @commands.command(
-        name="react", help="Add a reaction to a given message id if possible"
-    )
+    @commands.command(name="react", help="Add a reaction to a given message id if possible")
     async def react(self, ctx, message_given=0, reaction=""):
         message = await ctx.fetch_message(message_given)
         await message.add_reaction(reaction)
@@ -245,9 +304,9 @@ class Utility(
     # poll command
     @commands.command(name="poll", help="Create a poll")
     async def poll(self, ctx, title: str, *, o_r_in):
-        embed = discord.Embed(
-            title=title
-        ).set_author(name=ctx.message.author.display_name, icon_url=ctx.message.author.avatar_url)
+        embed = discord.Embed(title=title).set_author(
+            name=ctx.message.author.display_name, icon_url=ctx.message.author.avatar_url
+        )
 
         t_l = o_r_in.split(";")
 
@@ -255,21 +314,22 @@ class Utility(
             stuff = item.split()
             option = stuff[0]
             reaction = stuff[1]
-            embed.add_field(name=option), value = f'- {reaction}')
+            embed.add_field(name=option, value=f'- {reaction}')
 
-        msg=await ctx.channel.send(embed = embed)
+        msg = await ctx.channel.send(embed=embed)
 
         for item in t_l:
-            stuff=item.split()
-            reaction=stuff[1]
+            stuff = item.split()
+            reaction = stuff[1]
             await msg.add_reaction(reaction)
 
     # server info
-    @ commands.command(name = "s.inf", help = "Displays server info")
+    @commands.command(name="s.inf", help="Displays server info")
     async def sinf(self, ctx):
-        embed=discord.Embed(title = "Server Info",
-                            color = discord.Color.teal())
-        info_title=[
+        embed = discord.Embed(title="Server Info",
+                              color=discord.Color.teal())
+
+        info_title = [
             "Server Name",
             "Server ID",
             "Server Owner",
@@ -278,7 +338,8 @@ class Utility(
             "Role Count",
             "Region",
         ]
-        infos= [
+
+        infos = [
             str(ctx.message.guild.name),
             str(ctx.message.guild.id),
             str(ctx.guild.owner),
@@ -287,73 +348,33 @@ class Utility(
             str(len(ctx.message.guild.roles)),
             str(ctx.message.guild.region),
         ]
-        i= 0
+
+        i = 0
         for i in range(len(infos)):
             embed.add_field(name=info_title[i], value=infos[i])
-            i += 1
 
         embed.set_thumbnail(url=ctx.guild.icon_url)
+
         await ctx.channel.send(embed=embed)
 
     # avatar
-    @ commands.command(name="mypfp", help="Displays your pfp")
+    @commands.command(name="mypfp", help="Displays your pfp")
     async def pfp(self, ctx):
-        embed= discord.Embed(
-            title = f"Avatar of {ctx.author.display_name}", color = discord.Color.teal()
-        ).set_image(url = ctx.author.avatar_url)
-        await ctx.channel.send(embed = embed)
 
-    # Create simple embed command
-    @ commands.command(
-        name = "embed",
-        help = "Creates an embed with a given title, description, thumbnail, and fields",
-    )
-    async def embed(
-        self,
-        ctx,
-        given_id = 0,
-        title = "",
-        description = "",
-        thumbnail = "",
-        field_name = "",
-        field_value = "",
-        image = "",
-    ):
+        embed = discord.Embed(
+            title=f"Avatar of {ctx.author.display_name}",
+            color=discord.Color.teal()
+        ).set_image(url=ctx.author.avatar_url)
 
-        if given_id != 0:
-            channel=bot.get_channel(int(given_id))
-            embed_msg=discord.Embed(
-                title = title, description = description, color = discord.Color.green()
-            )
-            embed_msg.set_author(
-                name=ctx.author.display_name, icon_url=ctx.author.avatar_url
-            )
-            embed_msg.set_thumbnail(url=thumbnail)
-            embed_msg.add_field(name=field_name, value=field_value)
-
-            if image == "":
-                await channel.send(embed=embed_msg)
-
-            elif image != "":
-                embed_msg.set_image(url=image)
-
-        if given_id == 0:
-            embed_msg = discord.Embed(
-                title=title, description=description, color=discord.Color.green()
-            )
-            embed_msg.set_author(
-                name=ctx.author.display_name, icon_url=ctx.author.avatar_url
-            )
-            embed_msg.set_thumbnail(url=thumbnail)
-            embed_msg.add_field(name=field_name, value=field_value)
-
-            await ctx.channel.send(embed=embed_msg)
+        await ctx.channel.send(embed=embed)
 
 
 bot = commands.Bot(
     command_prefix=commands.when_mentioned_or("$"),
     intents=discord.Intents.all(),
     help_command=PrettyHelp(color=discord.Color.green()),
+
+
 )
 
 
@@ -364,6 +385,7 @@ async def on_ready():
     )
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print("Bot Ready!")
+    print("")
 
 
 @bot.event
@@ -381,7 +403,7 @@ async def on_member_join(member):
 async def on_message(message):
     log_line = f"\n{message.channel} | {message.author} : {message.content}"
     print(log_line)
-    
+
     log = open(f'{message.guild} log.txt', 'a')
     log.write(str(log_line))
 
