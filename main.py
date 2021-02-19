@@ -20,12 +20,18 @@ from pretty_help import PrettyHelp
 conn = sqlite3.connect("database.db")
 cursor = conn.cursor()
 
+cursor.execute(
+    "CREATE TABLE IF NOT EXISTS list (server_id integer, user_id integer, xp integer, lvl integer)"
+)
+
 
 # add user
 def add_user(server_id, user_id, xp, level):
     command = f"INSERT INTO list VALUES ('{server_id}','{user_id}','{xp}','{level}')"
     cursor.execute(command)
     conn.commit()
+    print(
+        f"Added User with id {user_id} from server with id {server_id} with {xp}xp and {level}level")
 
 
 # set xp for a user
@@ -47,21 +53,57 @@ def set_lvl(server_id, user_id, lvl):
     command = f"UPDATE list SET lvl = {lvl} WHERE user_id = {user_id} AND server_id = {server_id}"
     cursor.execute(command)
     conn.commit()
+    if lvl >= 1:
+        command = f"UPDATE list SET xp = 0 WHERE user_id = {user_id} AND server_id = {server_id}"
+        cursor.execute(command)
+        conn.commit()
+        print(f"Xp set to 0 for {user_id} in {server_id}")
+
     print(f"Level set to {user_id} in {server_id} to {lvl}")
 
 
-# get info about levels and xp for a user
+# get info about xp for a user
 def get_xp_info(server_id, user_id):
     command = f"SELECT * FROM list WHERE user_id = {user_id} AND server_id = {server_id}"
     cursor.execute(command)
-    infos = cursor.fetchall()
-    infos = f"xp: {infos[2]} | lvl: {infos[3]}"
+    info = cursor.fetchall()
+    infos = []
+    for item in info:
+        for i in item:
+            infos.append(i)
+    infos = infos[2]
+    print(infos)
+    return infos
+
+
+# get info about lvl for a user
+def get_lvl_info(server_id, user_id):
+    command = f"SELECT * FROM list WHERE user_id = {user_id} AND server_id = {server_id}"
+    cursor.execute(command)
+    info = cursor.fetchall()
+    infos = []
+    for item in info:
+        for i in item:
+            infos.append(i)
+    infos = infos[3]
     print(infos)
     return infos
 
 
 # get all info
-def get_all():
+def get_all(server_id):
+    command = f"SELECT * FROM list WHERE server_id = {server_id}"
+    cursor.execute(command)
+    info = cursor.fetchall()
+    infos = []
+    for item in infos:
+        for i in item:
+            infos.append(i)
+    return infos
+
+
+# get all info no server_id
+def get_all_no_server():
     command = f"SELECT * FROM list"
     cursor.execute(command)
     infos = cursor.fetchall()
@@ -294,15 +336,36 @@ class Moderation(
 
 # Utility Class
 class Utility(commands.Cog, description="Utilities like embeds and other stuff. Uses '$' as prefix."):
+    # Display level and Xp of a user in a server
+    @commands.command(name="lvl", help="Display your level and xp")
+    async def lvl(self, ctx):
+        server_lvl = get_all(ctx.guild.id)
+        if not ctx.message.author.id in server_lvl:
+            return
+
+        xp = get_xp_info(ctx.guild.id, ctx.author.id)
+        lvl = get_lvl_info(ctx.guild.id, ctx.author.id)
+        embed = discord.Embed(
+            title=f"Level and xp information about {ctx.author.display_name}"
+        )
+        value_xp_rem = ":white_large_square:" * int(10 - int((xp / 10)))
+        value_xp_emoji_in = ":blue_square:" * int((xp / 10))
+        value_xp_emoji = "*" + str(value_xp_emoji_in) + str(value_xp_rem) + "*"
+
+        embed.add_field(name="XP", value=xp, inline=True)
+        embed.add_field(name="Level", value=f"**{lvl}**")
+        embed.add_field(name="Progress Bar", value=value_xp_emoji)
+
+        await ctx.channel.send(embed=embed)
 
     # Create simple react command
-    @commands.command(name="react", help="Add a reaction to a given message id if possible")
+    @ commands.command(name="react", help="Add a reaction to a given message id if possible")
     async def react(self, ctx, message_given=0, reaction=""):
         message = await ctx.fetch_message(message_given)
         await message.add_reaction(reaction)
 
     # poll command
-    @commands.command(name="poll", help="Create a poll")
+    @ commands.command(name="poll", help="Create a poll")
     async def poll(self, ctx, title: str, *, o_r_in):
         embed = discord.Embed(title=title).set_author(
             name=ctx.message.author.display_name, icon_url=ctx.message.author.avatar_url
@@ -324,7 +387,7 @@ class Utility(commands.Cog, description="Utilities like embeds and other stuff. 
             await msg.add_reaction(reaction)
 
     # server info
-    @commands.command(name="s.inf", help="Displays server info")
+    @ commands.command(name="s.inf", help="Displays server info")
     async def sinf(self, ctx):
         embed = discord.Embed(title="Server Info",
                               color=discord.Color.teal())
@@ -386,6 +449,7 @@ async def on_ready():
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print("Bot Ready!")
     print("")
+    print(get_all_no_server())
 
 
 @bot.event
@@ -404,11 +468,41 @@ async def on_message(message):
     log_line = f"\n{message.channel} | {message.author} : {message.content}"
     print(log_line)
 
-    log = open(f'{message.guild} log.txt', 'a')
+    log = open(f'{message.guild.id}_log.txt', 'a')
     log.write(str(log_line))
 
     if message.author == bot.user:
         return
+
+    if message.content.startswith("$"):
+        await bot.process_commands(message)
+        return
+
+    info_raw = get_all(message.guild.id)
+    print(info_raw)
+
+    info = []
+
+    for item in info_raw:
+        for info_tuple in item:
+            print(type(info_tuple))
+            info.append(info_tuple)
+
+    if not message.author.id in info:
+        add_user(message.guild.id, message.author.id, 0, 0)
+        await bot.process_commands(message)
+        return
+
+    choosen_number = random.randint(0, 5)
+    print(choosen_number)
+    choosen_xp = int(info[2] + choosen_number)
+    choosen_lvl = float(info[3] + int(choosen_xp / 100))
+    print(choosen_lvl)
+    choosen_lvl = int(choosen_lvl)
+
+    if message.author.id in info:
+        set_xp(message.guild.id, message.author.id, choosen_xp)
+        set_lvl(message.guild.id, message.author.id, choosen_lvl)
 
     await bot.process_commands(message)
 
