@@ -3,25 +3,188 @@
 # imports
 # standard library imports
 import asyncio
+import io
 import json
 import random
 import re
 import string
 import time
-import sqlite3
 
 # third-part imports
 import discord
 import nacl
+import psycopg2
+import requests
 from discord.ext import commands
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 from pretty_help import PrettyHelp
 
 
-conn = sqlite3.connect("database.db")
+def rounded_rectangle(self: ImageDraw, xy, corner_radius, fill=None, outline=None):
+    upper_left_point = xy[0]
+    bottom_right_point = xy[1]
+    self.rectangle(
+        [
+            (upper_left_point[0], upper_left_point[1] + corner_radius),
+            (bottom_right_point[0], bottom_right_point[1] - corner_radius),
+        ],
+        fill=fill,
+        outline=outline,
+    )
+    self.rectangle(
+        [
+            (upper_left_point[0] + corner_radius, upper_left_point[1]),
+            (bottom_right_point[0] - corner_radius, bottom_right_point[1]),
+        ],
+        fill=fill,
+        outline=outline,
+    )
+    self.pieslice(
+        [
+            upper_left_point,
+            (
+                upper_left_point[0] + corner_radius * 2,
+                upper_left_point[1] + corner_radius * 2,
+            ),
+        ],
+        180,
+        270,
+        fill=fill,
+        outline=outline,
+    )
+    self.pieslice(
+        [
+            (
+                bottom_right_point[0] - corner_radius * 2,
+                bottom_right_point[1] - corner_radius * 2,
+            ),
+            bottom_right_point,
+        ],
+        0,
+        90,
+        fill=fill,
+        outline=outline,
+    )
+    self.pieslice(
+        [
+            (upper_left_point[0], bottom_right_point[1] - corner_radius * 2),
+            (upper_left_point[0] + corner_radius * 2, bottom_right_point[1]),
+        ],
+        90,
+        180,
+        fill=fill,
+        outline=outline,
+    )
+    self.pieslice(
+        [
+            (bottom_right_point[0] - corner_radius * 2, upper_left_point[1]),
+            (bottom_right_point[0], upper_left_point[1] + corner_radius * 2),
+        ],
+        270,
+        360,
+        fill=fill,
+        outline=outline,
+    )
+
+
+ImageDraw.rounded_rectangle = rounded_rectangle
+
+
+def draw(icon, xp, level, name, avt_size=1, avatar_x=600, avatar_y=745):
+    image = (
+        ImageEnhance.Brightness(
+            Image.open(
+                io.BytesIO(
+                    requests.get(
+                        # "http://picsum.photos/5000/1500?grayscale&&blur=4"
+                        "https://picsum.photos/id/1045/5000/1500?blur=5"
+                    ).content
+                )
+            )
+        )
+        .enhance(0.5)
+        .convert("RGB")
+    )
+    draw = ImageDraw.Draw(image)
+    draw.ellipse(
+        (
+            avatar_x - 445 * avt_size - 50,
+            avatar_y - 445 * avt_size - 50,
+            avatar_x + 445 * avt_size + 50,
+            avatar_y + 445 * avt_size + 50,
+        ),
+        (0, 0, 0),
+    )
+    mask = Image.new("L", image.size)
+    draw = ImageDraw.Draw(mask)
+    draw.ellipse(
+        (
+            int(avatar_x - 445 * avt_size),
+            int(avatar_y - 445 * avt_size),
+            int(avatar_x + 445 * avt_size),
+            int(avatar_y + 445 * avt_size),
+        ),
+        255,
+    )
+    pasted = Image.new("RGB", image.size)
+    avatar = Image.open(io.BytesIO(requests.get(icon).content)).resize(
+        (int(890 * avt_size), int(890 * avt_size))
+    )
+    pasted.paste(
+        avatar, (int(avatar_x - 445 * avt_size),
+                 int(avatar_y - 445 * avt_size))
+    )
+    composite = Image.composite(pasted, image, mask)
+    draw = ImageDraw.Draw(composite)
+    rounded_rectangle(draw, ((1150, 1150), (4850, 1350)), 100, (255, 255, 255))
+    rounded_rectangle(
+        draw, ((1200, 1200), (1300 + (4700 - 1200)
+                              * xp / 100, 1300)), 50, (0, 0, 0)
+    )
+
+    try:
+        draw.text(
+            (1200, 100),
+            name,
+            font=ImageFont.truetype("Arial", 400),
+            fill=(255, 255, 255),
+        )
+        draw.text(
+            (1200, 600),
+            f"lvl #{level}, {xp} xp",
+            font=ImageFont.truetype("Arial", 300),
+            fill=(255, 255, 255),
+        )
+    except OSError:
+        draw.text(
+            (1200, 100),
+            name,
+            font=ImageFont.truetype("arial.ttf", 400),
+            fill=(255, 255, 255),
+        )
+        draw.text(
+            (1200, 600),
+            f"lvl #{level}, {xp} xp",
+            font=ImageFont.truetype("arial.ttf", 300),
+            fill=(255, 255, 255),
+        )
+
+    result = composite.resize((500, 150), Image.ANTIALIAS)
+
+    return result
+
+
+conn = psycopg2.connect(user="",
+                        password="",
+                        host="",
+                        port="",
+                        database=""
+                        )
+
 cursor = conn.cursor()
 
 cursor.execute(
-    "CREATE TABLE IF NOT EXISTS list (server_id integer, user_id integer, xp integer, lvl integer)"
+    "CREATE TABLE IF NOT EXISTS list (server_id text, user_id text, xp integer, lvl integer)"
 )
 
 
@@ -31,7 +194,7 @@ def add_user(server_id, user_id, xp, level):
     cursor.execute(command)
     conn.commit()
     print(
-        f"Added User with id {user_id} from server with id {server_id} with {xp}xp and {level}level")
+        f"Added User with id '{user_id}' from server with id '{server_id}' with {xp}xp and {level}level")
 
 
 # set xp for a user
@@ -39,60 +202,64 @@ def set_xp(server_id, user_id, xp):
     command = "SELECT * FROM list"
     cursor.execute(command)
 
-    command = f"UPDATE list SET xp = {xp} WHERE user_id = {user_id} AND server_id = {server_id}"
+    command = f"UPDATE list SET xp = {xp} WHERE user_id = '{user_id}' AND server_id = '{server_id}'"
     cursor.execute(command)
     conn.commit()
-    print(f"XP set to {user_id} in {server_id} to {xp}")
+    print(f"XP set to '{user_id}' in '{server_id}' to {xp}")
 
 
 # set level for user
-def set_lvl(server_id, user_id, lvl):
+def set_lvl(server_id, user_id, lvl, calc_lvl):
     command = "SELECT * FROM list"
+    conn.commit()
     cursor.execute(command)
 
-    command = f"UPDATE list SET lvl = {lvl} WHERE user_id = {user_id} AND server_id = {server_id}"
+    command = f"UPDATE list SET lvl = {lvl} WHERE user_id = '{user_id}' AND server_id = '{server_id}'"
+    conn.commit()
     cursor.execute(command)
     conn.commit()
-    if lvl >= 1:
-        command = f"UPDATE list SET xp = 0 WHERE user_id = {user_id} AND server_id = {server_id}"
+    print(f"Level set to {user_id} in {server_id} to {lvl}")
+
+    if calc_lvl >= 1:
+        command = f"UPDATE list SET xp = 0 WHERE user_id = '{user_id}' AND server_id = '{server_id}'"
+        conn.commit()
         cursor.execute(command)
         conn.commit()
-        print(f"Xp set to 0 for {user_id} in {server_id}")
-
-    print(f"Level set to {user_id} in {server_id} to {lvl}")
+        print(f"XP set to '{user_id}' in '{server_id}' to 0")
 
 
 # get info about xp for a user
 def get_xp_info(server_id, user_id):
-    command = f"SELECT * FROM list WHERE user_id = {user_id} AND server_id = {server_id}"
+    command = f"SELECT * FROM list WHERE user_id = '{user_id}' AND server_id = '{server_id}'"
+    conn.commit()
     cursor.execute(command)
     info = cursor.fetchall()
     infos = []
     for item in info:
         for i in item:
             infos.append(i)
-    infos = infos[2]
+    try:
+        infos = infos[2]
+    except IndexError:
+        return 'e'
     print(infos)
     return infos
 
 
 # get info about lvl for a user
 def get_lvl_info(server_id, user_id):
-    command = f"SELECT * FROM list WHERE user_id = {user_id} AND server_id = {server_id}"
+    conn.commit()
+    command = f"SELECT * FROM list WHERE user_id = '{user_id}' AND server_id = '{server_id}'"
     cursor.execute(command)
     info = cursor.fetchall()
-    infos = []
-    for item in info:
-        for i in item:
-            infos.append(i)
-    infos = infos[3]
-    print(infos)
-    return infos
+    print(info)
+    return info
 
 
 # get all info
 def get_all(server_id):
-    command = f"SELECT * FROM list WHERE server_id = {server_id}"
+    command = f"SELECT * FROM list WHERE server_id = '{server_id}'"
+    conn.commit()
     cursor.execute(command)
     info = cursor.fetchall()
     return info
@@ -101,6 +268,7 @@ def get_all(server_id):
 # get all info no server_id
 def get_all_no_server():
     command = f"SELECT * FROM list"
+    conn.commit()
     cursor.execute(command)
     infos = cursor.fetchall()
     return infos
@@ -134,7 +302,7 @@ class Moderation(
     # see if command author has admin perms
     @commands.has_permissions(administrator=True)
     @commands.command(name="unhush", help="Unsilence a text channel")
-    async def hush(self, ctx, role_name="Members"):
+    async def unhush(self, ctx, role_name="Members"):
         role_members = discord.utils.get(ctx.guild.roles, name=role_name)
         await ctx.channel.set_permissions(role_members, send_messages=True)
 
@@ -152,16 +320,16 @@ class Moderation(
 
     # mute command
     # see if command author has kick perms
-    @commands.has_permissions(kick_members=True)
+    @commands.has_permissions(manage_roles=True)
     @commands.command(name="mute", help="Disables the access of a user to send messages")
-    async def mute(self, ctx, member: discord.Member, *, reason="No reason provided", timein=30000):
+    async def mute(self, ctx, member: discord.Member, *, reason="No reason provided"):
         role_muted = discord.utils.get(ctx.guild.roles, name="Muted")
         await member.add_roles(role_muted)
 
         muted_msg = discord.Embed(
             title=f"**:guide_dog: Muted {member}!**",
             description=f"**Reason: {reason}**\n**By: {ctx.author.mention}**\n**Time In Seconds: {timein}**",
-            color=discord.Color.teal,
+            color=discord.Color.teal(),
         )
 
         await ctx.channel.send(embed=muted_msg)
@@ -171,24 +339,6 @@ class Moderation(
         channel = bot.get_channel(channel_id)
 
         await channel.send(embed=muted_msg)
-
-        timein = int(time)
-        time.sleep(timein)
-
-        await member.remove_roles(role_muted)
-
-        unmuted_msg = discord.Embed(
-            title=f"**:guide_dog: unmted {member}!**",
-            color=discord.Color.teal()
-        )
-
-        await ctx.channel.send(embed=unmuted_msg)
-
-        channel = discord.utils.get(ctx.guild.channels, name="woof-bot-log")
-        channel_id = channel.id
-        channel = bot.get_channel(channel_id)
-
-        await channel.send(embed=unmuted_msg)
 
     # unmute command
     @commands.has_permissions(manage_roles=True)
@@ -286,16 +436,14 @@ class Moderation(
     @commands.has_permissions(ban_members=True)
     @commands.command(name="unban", help="Unbans a user from this server")
     async def unban(self, ctx, id: int, *, reason="No reason provided"):
-        server_name = ctx.message.guild.name
-
         user = await bot.fetch_user(id)
 
         unbanmsg = discord.Embed(
             title=f"**:guide_dog: Unbanned {user.name}!**",
             description=f"**By: {ctx.author.mention}**",
+            colro=discord.Color.teal()
         ).set_image(
             url="https://media.tenor.com/images/76f50d3ec6888dd3552db1d074435022/tenor.gif",
-            color=discord.Color.teal(),
         )
 
         await ctx.guild.unban(user)
@@ -333,22 +481,45 @@ class Moderation(
 # Utility Class
 class Utility(commands.Cog, description="Utilities like embeds and other stuff. Uses '$' as prefix."):
     # Display level and Xp of a user in a server
-    @commands.command(name="lvl", help="Display your level and xp")
+    @ commands.command(name="lvl", help="Display your level and xp")
     async def lvl(self, ctx):
+        msg = await ctx.channel.send("Retrieving info. Please wait, this might take a few seconds")
         xp = get_xp_info(ctx.guild.id, ctx.author.id)
-        lvl = get_lvl_info(ctx.guild.id, ctx.author.id)
-        embed = discord.Embed(
-            title=f"Level and xp information about {ctx.author.display_name}"
-        )
-        value_xp_rem = ":white_large_square:" * int(10 - int((xp / 10)))
-        value_xp_emoji_in = ":blue_square:" * int((xp / 10))
-        value_xp_emoji = "*" + str(value_xp_emoji_in) + str(value_xp_rem) + "*"
+        lvl_in = get_lvl_info(ctx.guild.id, ctx.author.id)
+        lvl = []
 
-        embed.add_field(name="XP", value=xp, inline=True)
-        embed.add_field(name="Level", value=f"**{lvl}**")
-        embed.add_field(name="Progress Bar", value=value_xp_emoji)
+        for i in lvl_in:
+            for item in i:
+                lvl.append(item)
 
-        await ctx.channel.send(embed=embed)
+        lvl = lvl[3]
+
+        if xp == 'e':
+            ctx.channel.send("Chat before you can get levels.")
+
+        # embed = discord.Embed(
+        #     title=f"Level and xp information about {ctx.author.display_name}"
+        # )
+        # value_xp_rem = ":white_large_square:" * int(10 - int((xp / 100)))
+        # value_xp_emoji_in = ":blue_square:" * int((xp / 100))
+        # value_xp_emoji = "*" + str(value_xp_emoji_in) + str(value_xp_rem) + "*"
+        #
+        # embed.add_field(name="XP", value=xp, inline=True)
+        # embed.add_field(name="Level", value=f"**{lvl}**")
+        # embed.add_field(name="Progress Bar", value=value_xp_emoji)
+
+        img = draw(str(ctx.message.author.avatar_url), xp,
+                   lvl, str(ctx.message.author.display_name))
+
+        arr = io.BytesIO()
+        img.save(arr, format='PNG')
+        arr.seek(0)
+        file = discord.File(
+            arr, filename=f"rank of {ctx.message.author.display_name!r}.png")
+        await ctx.channel.send(file=file)
+        await msg.delete()
+
+        # await ctx.channel.send(embed=embed)
 
     # Create simple react command
     @ commands.command(name="react", help="Add a reaction to a given message id if possible")
@@ -413,8 +584,8 @@ class Utility(commands.Cog, description="Utilities like embeds and other stuff. 
         await ctx.channel.send(embed=embed)
 
     # avatar
-    @commands.command(name="mypfp", help="Displays your pfp")
-    async def pfp(self, ctx):
+    @ commands.command(name="mypfp", help="Displays your pfp")
+    async def pfp(self, ctx, help_str: str):
 
         embed = discord.Embed(
             title=f"Avatar of {ctx.author.display_name}",
@@ -422,6 +593,47 @@ class Utility(commands.Cog, description="Utilities like embeds and other stuff. 
         ).set_image(url=ctx.author.avatar_url)
 
         await ctx.channel.send(embed=embed)
+
+    # help-needed-dev
+    @commands.command(name="dev-help", help='Get help from an active programmer')
+    async def dev_h(self, ctx):
+        basic = discord.utils.get(ctx.guild.roles, name="Puppy")
+        medium = discord.utils.get(ctx.guild.roles, name="Woof")
+        loud = discord.utils.get(ctx.guild.roles, name="Loud Woof")
+        programmer = discord.utils.get(ctx.guild.roles, name="Programmer")
+
+        members_basic = []
+        members_medium = []
+        members_loud = []
+
+        active_members_list = []
+
+        for member in ctx.guild.members:
+            if loud in member.roles:
+                members_loud.append(member)
+
+            elif basic in member.roles:
+                members_basic.append(member)
+
+            elif medium in member.roles:
+                members_medium.append(member)
+
+        for mem in members_loud:
+            if programmer in mem.roles:
+                active_members_list.append(mem)
+        for mem in members_medium:
+            if programmer in mem.roles:
+                active_members_list.append(mem)
+
+        if active_members_list == []:
+            for mem in members_basic:
+                if programmer in mem.roles:
+                    active_members_list.append(mem)
+        try:
+            choosen_dev = random.choice(active_members_list)
+            await ctx.channel.send(f'Hey {choosen_dev.mention} {ctx.author.mention} needs dev help!')
+        except IndexError:
+            await ctx.channel.send('No active members :frowning:')
 
 
 bot = commands.Bot(
@@ -451,7 +663,7 @@ async def on_member_join(member):
         await member.add_roles(role)
 
     except:
-        role = discord.utils.get(member.guild.roles, name="Member")
+        role = discord.utils.get(member.guild.roles, name="Members")
         await member.add_roles(role)
 
 
@@ -470,7 +682,27 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
-    info_raw = get_all(message.guild.id)
+    # Roles
+    # {
+    basic_role = discord.utils.get(message.guild.roles, name="Puppy")
+
+    medium_role = discord.utils.get(message.guild.roles, name="Woof")
+
+    loud_role = discord.utils.get(message.guild.roles, name="Loud Woof")
+    # }
+
+    try:
+        info = get_lvl_info(message.guild.id, message.author.id)
+        lvl = []
+        for i in info:
+            for item in i:
+                lvl.append(item)
+        lvl = lvl[3]
+    except:
+        print("ERROR")
+        pass
+
+    info_raw = get_lvl_info(message.guild.id, message.author.id)
     print(info_raw)
 
     info = []
@@ -480,24 +712,40 @@ async def on_message(message):
             print(type(info_tuple))
             info.append(info_tuple)
 
-    if not message.author.id in info:
+    print("OUTPUT")
+    print(info)
+
+    if not str(message.author.id) in info:
         add_user(message.guild.id, message.author.id, 0, 0)
         await bot.process_commands(message)
         return
 
-    choosen_number = random.randint(0, 5)
+    choosen_number = random.randint(1, 3)
     print(choosen_number)
     choosen_xp = int(info[2] + choosen_number)
-    choosen_lvl = float(info[3] + int(choosen_xp / 100))
+    calc_lvl = choosen_xp / 100
+    choosen_lvl = float(info[3] + calc_lvl)
     print(choosen_lvl)
     choosen_lvl = int(choosen_lvl)
 
-    if message.author.id in info:
+    if str(message.author.id) in info:
         set_xp(message.guild.id, message.author.id, choosen_xp)
-        set_lvl(message.guild.id, message.author.id, choosen_lvl)
+        set_lvl(message.guild.id, message.author.id, choosen_lvl, calc_lvl)
+
+        if choosen_lvl > lvl:
+            await message.channel.send(f"Congratulations! {message.author.mention}, You reached level {choosen_lvl}! :tada:")
+
+        if choosen_lvl >= 5 and choosen_lvl <= 9 and basic_role not in message.author.roles:
+            message.author.add_roles(basic_role)
+
+        if choosen_lvl >= 10 and choosen_lvl <= 24 and medium_role not in message.author.roles:
+            message.author.add_roles(medium_role)
+
+        if choosen_lvl >= 15 and loud_role not in message.author.roles:
+            message.author.add_roles(loud_role)
 
     await bot.process_commands(message)
 
 bot.add_cog(Moderation())
 bot.add_cog(Utility())
-bot.run("Your Token Here") # Your Bot's Token
+bot.run("Your Token Here")
