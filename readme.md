@@ -54,6 +54,8 @@ replace "Your Token" with your bot's token.
 
 **mypfp** : Display your pfp
 
+**dev-help** : Get help from an active programmer / dev
+
 ## Requirements
 
 **discord.py**
