@@ -1,0 +1,6 @@
+discord.py
+requests
+discord-pretty-help
+pynacl
+psycopg2
+Pillow
