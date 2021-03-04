@@ -735,14 +735,17 @@ async def on_message(message):
         if choosen_lvl > lvl:
             await message.channel.send(f"Congratulations! {message.author.mention}, You reached level {choosen_lvl}! :tada:")
 
+        if choosen_lvl > lvl:
+            await message.channel.send(f"Congratulations! {message.author.mention}, You reached level {choosen_lvl}! :tada:")
+
         if choosen_lvl >= 5 and choosen_lvl <= 9 and basic_role not in message.author.roles:
-            message.author.add_roles(basic_role)
+            await message.author.add_roles(basic_role)
 
         if choosen_lvl >= 10 and choosen_lvl <= 24 and medium_role not in message.author.roles:
-            message.author.add_roles(medium_role)
+            await message.author.add_roles(medium_role)
 
         if choosen_lvl >= 15 and loud_role not in message.author.roles:
-            message.author.add_roles(loud_role)
+            await message.author.add_roles(loud_role)
 
     await bot.process_commands(message)
 
