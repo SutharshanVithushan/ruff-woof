@@ -84,7 +84,6 @@ to **Rizerphe** for:
 
 - the image generator for the level system
 - helping with finding a formulae to use for calculating levels
-- help with splitting words (_coz i'm dumb lol_)
 - ideas for embeds and other stuff
 
 to **Metastag** for:
