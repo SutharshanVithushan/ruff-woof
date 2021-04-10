@@ -1,6 +1,6 @@
 # Ruff Woof Discord Bot
 
-This discord bot was created by **ACuteWoof** (ACuteWoof#7510 _on discord_, [on youtube](https://www.youtube.com/channel/UCLa0rouVotfUdDtUrlSdcug "Youtube Channel Of ACuteWoof")), with the help of **Rizerphe**#2538 and **Metastag**#2509.
+This discord bot was created by **ACuteWoof** (ACuteWoof#7510 _on discord_, [on youtube](https://www.youtube.com/channel/UCLa0rouVotfUdDtUrlSdcug "Youtube Channel Of ACuteWoof")), with the help of **Rizerphe** and **Metastag**.
 Special thanks to them for their contributions in making this bot :D
 
 ## Setup
