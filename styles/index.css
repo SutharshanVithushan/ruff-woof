@@ -1,0 +1,49 @@
+@font-face {
+  font-family: "Minecraft";
+  src: url("fonts/MinecraftRegular-Bmg3.otf");
+}
+
+@font-face {
+  font-family: "Segoe Script";
+  src: url("fonts/segoesc.ttf");
+}
+
+@font-face {
+  font-family: "Segoe UI";
+  src: url("fonts/Segoe-UI.ttf");
+}
+
+@font-face {
+  font-family: "fira code";
+  src: url("fonts/fira-code.ttf");
+}
+
+@font-face{
+  font-family:"Montserrat";
+  src: url("fonts/Mont.ttf");
+}
+
+
+body {
+  font-family: "Segoe UI";
+  color: whitesmoke;
+  background-color: #263238;
+  background-size: cover;
+  height: 100%;
+  margin: 0px;
+  padding: 0px;
+  background-position: center;
+}
+
+h1 {
+  font-family: "Montserrat";
+  font-size: 7vw;
+  color: #82aaff;
+  text-align: center;
+  line-height: 0.5;
+}
+
+h3{
+  font-family: "Segoe Script";
+  text-align: center;
+}
