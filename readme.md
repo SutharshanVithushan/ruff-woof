@@ -101,3 +101,5 @@ to **Me** for:
 
 - being dumb, jk
   Why would I credit myself lmao
+  
+[![license](https://img.shields.io/github/license/DAVFoundation/captain-n3m0.svg?style=flat-square)](https://github.com/DAVFoundation/captain-n3m0/blob/master/LICENSE)
