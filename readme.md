@@ -1,7 +1,6 @@
 <h1 align="center">Ruff Woof Discord Bot</h1>
 
-<div align='center'>[![license](https://img.shields.io/github/license/DAVFoundation/captain-n3m0.svg?style=flat-square)](https://github.com/DAVFoundation/captain-n3m0/blob/master/LICENSE)
-</div>
+<img align='center' src='https://img.shields.io/github/license/DAVFoundation/captain-n3m0.svg?style=flat-square' alt="LICENSE"></img>
 
 A simple discord bot.
 
