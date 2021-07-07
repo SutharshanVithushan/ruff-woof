@@ -1,7 +1,9 @@
-# Ruff Woof Discord Bot
+<h1 align="center">Ruff Woof Discord Bot</h1>
 
-This discord bot was created by **ACuteWoof** ([on youtube](https://www.youtube.com/channel/UCLa0rouVotfUdDtUrlSdcug "Youtube Channel Of ACuteWoof")), with the help of **Rizerphe** and **Metastag**.
-Special thanks to them for their contributions in making this bot :D
+<div align='center'>[![license](https://img.shields.io/github/license/DAVFoundation/captain-n3m0.svg?style=flat-square)](https://github.com/DAVFoundation/captain-n3m0/blob/master/LICENSE)
+</div>
+
+A simple discord bot.
 
 ## Setup
 
@@ -58,6 +60,10 @@ replace "Your Token" with your bot's token.
 
 ## Requirements
 
+Install all requirements using `pip install -r requirement.txt`
+
+### Included requirements
+
 **discord.py**
 install with pip: `pip install discord.py` or `pip install discord`
 
@@ -75,8 +81,6 @@ install with pip: `pip install psycopg2`
 
 **pillow**
 install with pip: `pip install pillow`
-
-_requirements also included in requirements.txt :D_
 
 ## Credits
 
@@ -102,4 +106,3 @@ to **Me** for:
 - being dumb, jk
   Why would I credit myself lmao
   
-[![license](https://img.shields.io/github/license/DAVFoundation/captain-n3m0.svg?style=flat-square)](https://github.com/DAVFoundation/captain-n3m0/blob/master/LICENSE)
