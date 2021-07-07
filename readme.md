@@ -1,6 +1,5 @@
-<h1 align="center">Ruff Woof Discord Bot</h1>
-
-<img align='center' src='https://img.shields.io/github/license/DAVFoundation/captain-n3m0.svg?style=flat-square' alt="LICENSE"></img>
+<h1 align="center">Ruff Woof Discord Bot
+<p align='center'> <img src='https://img.shields.io/badge/LICENSE-MIT-%235e81ac?style=flat-square' alt="LICENSE"></img> </p> <h1>
 
 A simple discord bot.
 
